@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GPS Events Results</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 30px; background: #454545; }
+    .container { max-width: 1200px; margin: 50px auto; background: #9FE2BF; border-radius: 30px; padding: 33px 39px; box-shadow: 0 3px 9px #ececec; position: relative; }
+    table { border-collapse:collapse; width: 100%; margin-top: 9px; }
+    th, td { border: 2px solid #ccc; padding: 12px 11px; text-align: left; font-size: 15px; }
+    th { background: #f0f0f0; }
+    /* Added specific width for Date and Driver Name columns */
+    th.date-col, td.date-col { min-width: 130px; width: 130px; }
+    th.driver-col, td.driver-col { min-width: 180px; width: 180px; }
+    .actions { margin-bottom: 20px; }
+    button { padding: 9px 20px; font-size: 15px; border-radius: 4px; border: none; background: #2366d1; color: white; cursor: pointer; }
+    button[type="button"] { background: #000000; }
+    button:hover { opacity: 0.92; }
+    @media (max-width: 700px) {
+      .container { padding: 12px 3px; }
+th, td {
+  min-width: 100px; /* or any value you want */
+  width: 100px;     /* or any value you want */
+ }
+      th.date-col, td.date-col { min-width: 80px; width: 80px; }
+      th.driver-col, td.driver-col { min-width: 80px; width: 80px; }
+    }
+    h2{text-align:center;font-size:40px;background:#40E0D0;font-style: italic;}
+    .developer-name-bottom {font-style: italic;
+      position: relative;
+      display: flex;
+      justify-content: right;
+      align-items: right;
+      margin-top: 60px;
+      font-size: 15px;
+      color: #444;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+</head>
+<body>
+  <div class="container" id="pdfArea">
+    <h2>Bilos Driver GPS Information</h2>
+    <div class="actions">
+      <button onclick="window.location='endex.html'">Add More Entries</button>
+      <button onclick="clearData()">Clear All Data</button>
+      <button onclick="exportPDF()">Export as PDF</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th class="driver-col">Driver Name</th>
+          <th>Plate Number</th>
+          <th>Starting Point</th>
+          <th>Destination</th>
+          <th class="date-col">moving Date</th>
+          <th>unauthorised Stopping Time</th>
+          <th>moved unauthorised Place(if any)</th>
+          <th>Other GPS Problem</th>
+          <th>Other Technical Problem</th>
+        </tr>
+      </thead>
+      <tbody id="dataRows"></tbody>
+    </table>
+    <div class="developer-name-bottom">
+       <b style="margin-left:5px;">Endakmew</b>
+    </div>
+  </div>
+  <script>
+    function populateTable() {
+      const tbody = document.getElementById('dataRows');
+      tbody.innerHTML = '';
+      let data = JSON.parse(localStorage.getItem('gpsEntries') || '[]');
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center">No data submitted yet.</td></tr>';
+        return;
+      }
+      for (const entry of data) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="driver-col">${entry.driver}</td>
+          <td>${entry.plate}</td>
+          <td>${entry.startingPoint || ''}</td>
+          <td>${entry.destination || ''}</td>
+          <td class="date-col">${entry.date}</td>
+          <td>${entry.stoppingTime}</td>
+          <td>${entry.unauthorised || ''}</td>
+          <td>${entry.gpsProblem || ''}</td>
+          <td>${entry.techProblem || ''}</td>
+        `;
+        tbody.appendChild(row);
+      }
+    }
+
+    function clearData() {
+      if(confirm("Are you sure you want to clear all data?")) {
+        localStorage.removeItem('gpsEntries');
+        populateTable();
+      }
+    }
+
+    function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(20);
+      doc.text("Bilos GPS & Technical Events", 14, 18);
+      doc.setFontSize(11);
+      doc.text(" ", 14, 27);
+
+      let data = JSON.parse(localStorage.getItem('gpsEntries') || '[]');
+      if (!data.length) {
+        doc.text("No data submitted yet.", 14, 40);
+      } else {
+        const head = [[
+          "Driver Name",
+          "Plate Number",
+          "Starting Point",
+          "Destination",
+          "Date",
+          "Stopping Time",
+          "Unauthorised Place",
+          "Other GPS Problem",
+          "Other Technical Problem"
+        ]];
+        const body = data.map(entry => [
+          entry.driver,
+          entry.plate,
+          entry.startingPoint || "",
+          entry.destination || "",
+          entry.date,
+          entry.stoppingTime,
+          entry.unauthorised || "",
+          entry.gpsProblem || "",
+          entry.techProblem || ""
+        ]);
+        doc.autoTable({
+          startY: 35,
+          head: head,
+          body: body,
+          styles: { fontSize: 9},
+          headStyles: { fillColor: [35, 102, 209] },
+          columnStyles: {
+            0: {cellWidth: 40}, // Driver Name column wider in PDF
+            4: {cellWidth: 32} // Date column wider in PDF
+          }
+        });
+      }
+      doc.save('gps_information.pdf');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      populateTable();
+    });
+  </script>
+</body>
+</html>
